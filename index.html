@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tetris Effect</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: Arial, sans-serif;
+        }
+        .game-container {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+        .game-area {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+        .info-box {
+            color: #fff;
+            font-size: 24px;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 10px;
+            min-width: 200px;
+        }
+        .info-box h3 {
+            margin: 0 0 10px 0;
+            color: #888;
+            font-size: 18px;
+        }
+        canvas {
+            border: 2px solid #333;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+        }
+        .score-line {
+            margin: 5px 0;
+            display: flex;
+            justify-content: space-between;
+        }
+        .score-label {
+            color: #888;
+        }
+        .score-value {
+            color: #fff;
+        }
+        #previewCanvas {
+            margin-bottom: 20px;
+        }
+        .settings-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 2px solid #333;
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        .settings-btn:hover {
+            background: rgba(0, 255, 255, 0.2);
+            border-color: #0DC2FF;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: #1a1a1a;
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #333;
+            color: #fff;
+            min-width: 300px;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .close-btn {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        .color-option {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+        }
+        .color-preview {
+            width: 30px;
+            height: 30px;
+            border-radius: 5px;
+            margin-right: 10px;
+        }
+        .style-option {
+            margin: 10px 0;
+        }
+        .style-option select {
+            background: #333;
+            color: #fff;
+            border: 1px solid #444;
+            padding: 5px;
+            border-radius: 3px;
+            width: 100%;
+        }
+        .save-btn {
+            background: #0DC2FF;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 20px;
+            font-size: 16px;
+        }
+        .save-btn:hover {
+            background: #0a9fd9;
+        }
+    </style>
+</head>
+<body>
+    <button class="settings-btn" onclick="openSettings()">⚙️ Settings</button>
+    <div class="game-container">
+        <canvas id="previewCanvas" width="120" height="120"></canvas>
+        <div class="game-area">
+            <div class="info-box">
+                <h3>Held Piece</h3>
+                <canvas id="holdCanvas" width="120" height="120"></canvas>
+            </div>
+            <canvas id="gameCanvas"></canvas>
+            <div class="info-box">
+                <h3>Score</h3>
+                <div class="score-line">
+                    <span class="score-label">Score:</span>
+                    <span class="score-value" id="scoreValue">0</span>
+                </div>
+                <div class="score-line">
+                    <span class="score-label">Level:</span>
+                    <span class="score-value" id="levelValue">1</span>
+                </div>
+                <div class="score-line">
+                    <span class="score-label">Combo:</span>
+                    <span class="score-value" id="comboValue">0</span>
+                </div>
+                <div class="score-line">
+                    <span class="score-label">Stack:</span>
+                    <span class="score-value" id="stackValue">0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Piece Settings</h2>
+                <button class="close-btn" onclick="closeSettings()">&times;</button>
+            </div>
+            <div class="style-option">
+                <label>Piece Style:</label>
+                <select id="pieceStyle" onchange="updatePieceStyle()">
+                    <option value="classic">Classic</option>
+                    <option value="modern">Modern</option>
+                    <option value="neon">Neon</option>
+                </select>
+            </div>
+            <div id="colorOptions">
+                <h3>Piece Colors</h3>
+                <div class="color-option">
+                    <div class="color-preview" style="background: #FF0D72"></div>
+                    <input type="color" value="#FF0D72" onchange="updateColor(0, this.value)">
+                </div>
+                <div class="color-option">
+                    <div class="color-preview" style="background: #0DC2FF"></div>
+                    <input type="color" value="#0DC2FF" onchange="updateColor(1, this.value)">
+                </div>
+                <div class="color-option">
+                    <div class="color-preview" style="background: #0DFF72"></div>
+                    <input type="color" value="#0DFF72" onchange="updateColor(2, this.value)">
+                </div>
+                <div class="color-option">
+                    <div class="color-preview" style="background: #F538FF"></div>
+                    <input type="color" value="#F538FF" onchange="updateColor(3, this.value)">
+                </div>
+                <div class="color-option">
+                    <div class="color-preview" style="background: #FF8E0D"></div>
+                    <input type="color" value="#FF8E0D" onchange="updateColor(4, this.value)">
+                </div>
+                <div class="color-option">
+                    <div class="color-preview" style="background: #FFE138"></div>
+                    <input type="color" value="#FFE138" onchange="updateColor(5, this.value)">
+                </div>
+                <div class="color-option">
+                    <div class="color-preview" style="background: #3877FF"></div>
+                    <input type="color" value="#3877FF" onchange="updateColor(6, this.value)">
+                </div>
+            </div>
+            <button class="save-btn" onclick="saveSettings()">Save Settings</button>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+    <script>
+        function openSettings() {
+            document.getElementById('settingsModal').style.display = 'flex';
+        }
+
+        function closeSettings() {
+            document.getElementById('settingsModal').style.display = 'none';
+        }
+
+        function updateColor(index, color) {
+            const preview = document.querySelectorAll('.color-preview')[index];
+            preview.style.background = color;
+            window.updatePieceColor(index, color);
+        }
+
+        function updatePieceStyle() {
+            const style = document.getElementById('pieceStyle').value;
+            window.updatePieceStyle(style);
+        }
+
+        function saveSettings() {
+            closeSettings();
+        }
+    </script>
+</body>
+</html> 
